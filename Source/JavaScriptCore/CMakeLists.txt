@@ -667,6 +667,8 @@ set(OFFLINE_ASM
     offlineasm/x86.rb
 )
 
+message("COMMAND ${PYTHON_EXECUTABLE} ${JAVASCRIPTCORE_DIR}/generate-bytecode-files --bytecodes_h ${DERIVED_SOURCES_JAVASCRIPTCORE_DIR}/Bytecodes.h --init_bytecodes_asm ${DERIVED_SOURCES_JAVASCRIPTCORE_DIR}/InitBytecodes.asm ${JAVASCRIPTCORE_DIR}/bytecode/BytecodeList.json")
+
 add_custom_command(
     OUTPUT ${DERIVED_SOURCES_JAVASCRIPTCORE_DIR}/Bytecodes.h ${DERIVED_SOURCES_JAVASCRIPTCORE_DIR}/InitBytecodes.asm
     MAIN_DEPENDENCY ${JAVASCRIPTCORE_DIR}/generate-bytecode-files
@@ -973,6 +975,20 @@ set(JavaScriptCore_FORWARDING_HEADERS_FILES
     ${DERIVED_SOURCES_JAVASCRIPTCORE_DIR}/Bytecodes.h
 )
 
+macro(ADD_SOURCE_DEPENDENCIES _source _deps)
+    set(_tmp)
+    get_source_file_property(_tmp ${_source} OBJECT_DEPENDS)
+    if (NOT _tmp)
+        set(_tmp "")
+    endif ()
+
+    foreach (f ${_deps})
+        list(APPEND _tmp "${f}")
+    endforeach ()
+
+    set_source_files_properties(${_source} PROPERTIES OBJECT_DEPENDS "${_tmp}")
+endmacro()
+
 
 # GENERATOR 1-B: particular LUT creator (for 1 file only)
 GENERATE_HASH_LUT(${CMAKE_CURRENT_SOURCE_DIR}/parser/Keywords.table ${DERIVED_SOURCES_JAVASCRIPTCORE_DIR}/Lexer.lut.h)
@@ -1169,15 +1185,13 @@ else ()
 endif ()
 
 
-WEBKIT_INCLUDE_CONFIG_FILES_IF_EXISTS()
 
-WEBKIT_CREATE_FORWARDING_HEADERS(JavaScriptCore DIRECTORIES ${JavaScriptCore_FORWARDING_HEADERS_DIRECTORIES} FILES ${JavaScriptCore_FORWARDING_HEADERS_FILES})
 
 if(NOT DEFINED INSTRUMENT_SWITCH)
     add_subdirectory(shell)
 endif ()
 
-WEBKIT_WRAP_SOURCELIST(${JavaScriptCore_SOURCES})
+WEBKIT_INCLUDE_CONFIG_FILES_IF_EXISTS()
 include_directories(${JavaScriptCore_INCLUDE_DIRECTORIES})
 add_library(JavaScriptCore ${JavaScriptCore_LIBRARY_TYPE} ${JavaScriptCore_HEADERS} ${JavaScriptCore_SOURCES})
 target_link_libraries(JavaScriptCore ${JavaScriptCore_LIBRARIES})
@@ -1192,7 +1206,7 @@ if (${JavaScriptCore_LIBRARY_TYPE} STREQUAL "SHARED")
     POPULATE_LIBRARY_VERSION(JAVASCRIPTCORE)
     set_target_properties(JavaScriptCore PROPERTIES VERSION ${JAVASCRIPTCORE_VERSION} SOVERSION ${JAVASCRIPTCORE_VERSION_MAJOR})
 #    install(TARGETS JavaScriptCore DESTINATION "${LIB_INSTALL_DIR}")
-    install(TARGETS JavaScriptCore DESTINATION "${BROWSER_LIB_INSTALL_DIR}")
+#    install(TARGETS JavaScriptCore DESTINATION "${BROWSER_LIB_INSTALL_DIR}")
 endif ()
 
 if (ENABLE_FTL_JIT)

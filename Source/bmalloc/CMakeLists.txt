@@ -16,7 +16,6 @@ set(bmalloc_SOURCES
     bmalloc/mbmalloc.cpp
 )
 
-WEBKIT_WRAP_SOURCELIST(${bmalloc_SOURCES})
 include_directories(${bmalloc_INCLUDE_DIRECTORIES})
 add_library(bmalloc STATIC ${bmalloc_SOURCES})
 target_link_libraries(bmalloc ${bmalloc_LIBRARIES})

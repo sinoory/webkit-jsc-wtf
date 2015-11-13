@@ -14,7 +14,7 @@ set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/Source/cmake")
 
 # Do not create transitive library dependencies by default
 set(CMAKE_LINK_INTERFACE_LIBRARIES "")
-
+set(WTF_CPU_X86_64 1)
 set (PORT GTK)
 # -----------------------------------------------------------------------------
 # Determine which port will be built
@@ -71,6 +71,75 @@ include(OptionsCommon)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+set(DERIVED_SOURCES_JAVASCRIPTCORE_DIR "${CMAKE_BINARY_DIR}/DerivedSources/JavaScriptCore")
+set(DERIVED_SOURCES_WEBINSPECTORUI_DIR "${CMAKE_BINARY_DIR}/DerivedSources/WebInspectorUI")
+
+set(RUBY_EXECUTABLE "/usr/bin/ruby")
+set(PYTHON_EXECUTABLE "/usr/bin/python")
+
+macro(POPULATE_LIBRARY_VERSION library_name)
+if (NOT DEFINED ${library_name}_VERSION_MAJOR)
+    set(${library_name}_VERSION_MAJOR ${PROJECT_VERSION_MAJOR})
+endif ()
+if (NOT DEFINED ${library_name}_VERSION_MINOR)
+    set(${library_name}_VERSION_MINOR ${PROJECT_VERSION_MINOR})
+endif ()
+if (NOT DEFINED ${library_name}_VERSION_MICRO)
+    set(${library_name}_VERSION_MICRO ${PROJECT_VERSION_MICRO})
+endif ()
+if (NOT DEFINED ${library_name}_VERSION)
+    set(${library_name}_VERSION ${PROJECT_VERSION})
+endif ()
+endmacro()
+
+macro(INCLUDE_IF_EXISTS _file)
+    if (EXISTS ${_file})
+        message(STATUS "Using platform-specific CMakeLists: ${_file}")
+        include(${_file})
+    else ()
+        message(STATUS "Platform-specific CMakeLists not found: ${_file}")
+    endif ()
+endmacro()
+
+macro(WEBKIT_INCLUDE_CONFIG_FILES_IF_EXISTS)
+    if (PORT_FALLBACK)
+        INCLUDE_IF_EXISTS(${CMAKE_CURRENT_SOURCE_DIR}/Platform${PORT_FALLBACK}.cmake)
+    endif ()
+    INCLUDE_IF_EXISTS(${CMAKE_CURRENT_SOURCE_DIR}/Platform${PORT}.cmake)
+endmacro()
+
+macro(WEBKIT_SET_EXTRA_COMPILER_FLAGS _target)
+    set(options ENABLE_WERROR IGNORECXX_WARNINGS)
+    CMAKE_PARSE_ARGUMENTS("OPTION" "${options}" "" "" ${ARGN})
+    if (CMAKE_COMPILER_IS_GNUCXX OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+        get_target_property(OLD_COMPILE_FLAGS ${_target} COMPILE_FLAGS)
+        if (${OLD_COMPILE_FLAGS} STREQUAL "OLD_COMPILE_FLAGS-NOTFOUND")
+            set(OLD_COMPILE_FLAGS "")
+        endif ()
+
+        get_target_property(TARGET_TYPE ${_target} TYPE)
+        if (${TARGET_TYPE} STREQUAL "STATIC_LIBRARY") # -fPIC is automatically added to shared libraries
+            set(OLD_COMPILE_FLAGS "-fPIC ${OLD_COMPILE_FLAGS}")
+        endif ()
+
+        # Enable warnings by default
+        if (NOT ${OPTION_IGNORECXX_WARNINGS})
+            set(OLD_COMPILE_FLAGS "-Wall -Wextra -Wcast-align -Wformat-security -Wmissing-format-attribute -Wpointer-arith -Wundef -Wwrite-strings ${OLD_COMPILE_FLAGS}")
+        endif ()
+
+        # Enable errors on warning
+        if (OPTION_ENABLE_WERROR)
+            set(OLD_COMPILE_FLAGS "-Werror -Wno-error=unused-parameter ${OLD_COMPILE_FLAGS}")
+        endif ()
+
+        set_target_properties(${_target} PROPERTIES
+            COMPILE_FLAGS "${OLD_COMPILE_FLAGS}")
+
+        unset(OLD_COMPILE_FLAGS)
+    endif ()
+endmacro()
+
+
 
 # -----------------------------------------------------------------------------
 # Port-specific options
